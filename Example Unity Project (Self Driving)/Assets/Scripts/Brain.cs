@@ -95,10 +95,14 @@ namespace DiscreteSignals.GrayMatter
     {
         public List<Receptor> receptors;
         public Layer sensoryLayer;
-        public Sense(List<Receptor> _receptors)
+        public Sense(List<Receptor> _receptors, System.Func<float, float> _ActivationFunction = null)
         {
+            System.Func<float, float> ActivationFunction;
+            if (_ActivationFunction == null) ActivationFunction = (float value) => { return value; };
+            else ActivationFunction = _ActivationFunction;
+
             receptors = _receptors;
-            sensoryLayer = new Layer(receptors.Count);
+            sensoryLayer = new Layer(receptors.Count, ActivationFunction);
             for (int n = 0; n < receptors.Count; n++)
             {
                 receptors[n].BindNeuron(sensoryLayer.neurons[n]);
@@ -125,10 +129,14 @@ namespace DiscreteSignals.GrayMatter
     {
         public List<Muscle> muscles;
         public Layer actionLayer;
-        public Reaction(List<Muscle> _muscles)
+        public Reaction(List<Muscle> _muscles, System.Func<float, float> _ActivationFunction = null)
         {
+            System.Func<float, float> ActivationFunction;
+            if (_ActivationFunction == null) ActivationFunction = (float value) => { return value; };
+            else ActivationFunction = _ActivationFunction;
+
             muscles = _muscles;
-            actionLayer = new Layer(muscles.Count);
+            actionLayer = new Layer(muscles.Count, ActivationFunction);
             for (int n = 0; n < muscles.Count; n++)
             {
                 actionLayer.neurons[n].ConnectTo(muscles[n]);
@@ -157,16 +165,19 @@ namespace DiscreteSignals.GrayMatter
 
     public class Layer
     {
-        public Layer(int size)
+        public Layer(int size, System.Func<float, float> _ActivationFunction = null)
         {
+            System.Func<float, float> ActivationFunction;
+            if (_ActivationFunction == null) ActivationFunction = (float value) => { return value; };
+            else ActivationFunction = _ActivationFunction;
+
             neurons = new List<Neuron>();
 
             for (int n = 0; n < size; n++)
             {
-                neurons.Add(new Neuron());
+                neurons.Add(new Neuron(ActivationFunction));
             }
         }
-
         public List<Neuron> neurons;
 
         public void ConnectTo(Layer B)
@@ -192,22 +203,26 @@ namespace DiscreteSignals.GrayMatter
 
     public class Neuron
     {
-        public Neuron()
+        public Neuron(System.Func<float, float> _ActivationFunction = null)
         {
+            if (_ActivationFunction == null) ActivationFunction = (float value) => { return value; };
+            else ActivationFunction = _ActivationFunction;
+
             value = 0;
             dendrites = new List<Dendrite>();
         }
 
+        private System.Func<float, float> ActivationFunction;
         private float value;
         public List<Dendrite> dendrites;
 
         public void ConnectTo(Neuron B)
         {
-            dendrites.Add(new Dendrite(this, B));
+            dendrites.Add(new Dendrite(this, B, ActivationFunction));
         }
         public void ConnectTo(Muscle M)
         {
-            dendrites.Add(new Dendrite(this, M));
+            dendrites.Add(new Dendrite(this, M, ActivationFunction));
         }
         public void Prime(float v) { value = value + v; }
 
@@ -227,17 +242,24 @@ namespace DiscreteSignals.GrayMatter
         public Neuron A;
         public Neuron B;
         public Muscle M;
-        public Dendrite(Neuron _A, Neuron _B)
+        private System.Func<float, float> ActivationFunction;
+        public Dendrite(Neuron _A, Neuron _B, System.Func<float, float> _ActivationFunction = null)
         {
-            weight = Random.value;
+            if (_ActivationFunction == null) ActivationFunction = (float value) => { return value; };
+            else ActivationFunction = _ActivationFunction;
+
+            weight = (2.0f * Random.value) - 1.0f;
             A = _A;
             B = _B;
 
             M = null;
         }
-        public Dendrite(Neuron _A, Muscle _M)
+        public Dendrite(Neuron _A, Muscle _M, System.Func<float, float> _ActivationFunction = null)
         {
-            weight = Random.value;
+            if (_ActivationFunction == null) ActivationFunction = (float value) => { return value; };
+            else ActivationFunction = _ActivationFunction;
+            
+            weight = (2.0f * Random.value) - 1.0f;
             A = _A;
             M = _M;
 
@@ -247,19 +269,19 @@ namespace DiscreteSignals.GrayMatter
         {
             if (B != null)
             {
-                B.Prime(value * weight);
+                B.Prime(ActivationFunction(value * weight));
             }
             if (M != null)
             {
-                M.Prime(value * weight);
+                M.Prime(ActivationFunction(value * weight));
             }
         }
         public void Mutate(float mutationRate, float maxMutation)
         {
             if (Random.value <= mutationRate)
             {
-                float delta = maxMutation * (Random.value - 0.5f);
-                weight = Mathf.Clamp01(weight + delta);
+                float delta = maxMutation * 2.0f * (Random.value - 0.5f);
+                weight = weight + delta;//Mathf.Clamp(weight + delta, -10.0f, 10.0f));
             }
         }
     }

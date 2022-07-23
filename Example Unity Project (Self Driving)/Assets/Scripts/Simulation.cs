@@ -6,35 +6,40 @@ using DiscreteSignals.GrayMatter;
 public class Simulation : MonoBehaviour
 {
     public GameObject spawnPoint;
-    public Drive carPrefab;
+    public DriverAI carPrefab;
     public int numCars;
     public int numWithTopFitness;
     public int numRandom;
     public float mutationRate;
     public float maxMutation;
+    public float nextBatchTime;
+    public float time = 0.0f;
     public bool nextBatchOverride = false;
 
-    private List<Drive> cars;
+    private List<DriverAI> cars;
     // Start is called before the first frame update
     void Start()
     {
-        cars = new List<Drive>();
+        cars = new List<DriverAI>();
         for (int car = 0; car < numCars; car++)
         {
             cars.Add(Instantiate(carPrefab, spawnPoint.transform.position, spawnPoint.transform.rotation));
             cars[cars.Count - 1].Initialize();
         }
-        foreach (Drive c in cars) c.halted = false;
+        foreach (DriverAI c in cars) c.halted = false;
     }
 
     // Update is called once per frame
     void Update()
     {
-        if(nextBatchOverride)
+        time += Time.deltaTime;
+        if (time > nextBatchTime)nextBatchOverride = true;
+        if(nextBatchOverride || !StillDriving())
         {
+            time = 0.0f;
             nextBatchOverride = false;
 
-            List<Drive> topCars = GetTopCars(numWithTopFitness);
+            List<DriverAI> topCars = GetTopCars(numWithTopFitness);
             int car = 0;
             while (car < numCars - (numWithTopFitness + numRandom))
             {
@@ -79,12 +84,12 @@ public class Simulation : MonoBehaviour
             }
 
             for (int i = 0; i < topCars.Count; i++) Destroy(topCars[i].gameObject);
-            foreach (Drive c in cars) c.halted = false;
+            foreach (DriverAI c in cars) c.halted = false;
         }
     }
-    List<Drive> GetTopCars(int num)
+    List<DriverAI> GetTopCars(int num)
     {
-        List<Drive> topCars = new List<Drive>();
+        List<DriverAI> topCars = new List<DriverAI>();
 
         while (topCars.Count < numWithTopFitness)
         {
@@ -92,7 +97,7 @@ public class Simulation : MonoBehaviour
             int index = 0;
             for (int car = 0; car < cars.Count; car++)
             {
-                if (cars[car].fitness > maxFitness) 
+                if (cars[car].fitness >= maxFitness) 
                 {
                     index = car;
                     maxFitness = cars[car].fitness;
@@ -100,9 +105,15 @@ public class Simulation : MonoBehaviour
             }
             topCars.Add(cars[index]);
             Debug.Log("TopCar Fitness: " + cars[index].fitness);
-            cars[index].fitness = 0;
+            cars[index].fitness = -1;
         }
 
         return topCars;
+    }
+
+    bool StillDriving()
+    {
+        foreach (DriverAI car in cars) if (!car.halted) return true;
+        return false;
     }
 }

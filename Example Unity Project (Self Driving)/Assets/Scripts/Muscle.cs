@@ -8,10 +8,10 @@ namespace DiscreteSignals.GrayMatter
     {
         public System.Action<float> Activate;
         public GameObject bone;
-        public float power = 1;
+        public int ID;
         private float value = 0.0f;
 
-        public void SetActivateFunction(System.Action<float> f)
+        public void SetControlFunction(System.Action<float> f)
         {
             Activate = f;
         }
@@ -22,7 +22,7 @@ namespace DiscreteSignals.GrayMatter
         }
         public void Fire()
         {
-            Activate(value * power);
+            Activate(value);
         }
         public void Reset()
         {
